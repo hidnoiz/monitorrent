@@ -187,7 +187,7 @@ def upgrade_3_to_4(engine, operations_factory):
                         tracker_settings = settings_manager.tracker_settings
 
                     old_url = 'https://www.lostfilm.tv/browse.php?cat={0}'.format(cat)
-                    url_response = scraper.get(old_url, **tracker_settings.get_requests_kwargs())
+                    url_response = scraper.get(old_url, verify=False, **tracker_settings.get_requests_kwargs())
 
                     soup = get_soup(url_response.text)
                     meta_content = soup.find('meta').attrs['content']
@@ -465,7 +465,7 @@ class LostFilmTVTracker(object):
 
     def login(self, email, password):
         params = {"act": "users", "type": "login", "mail": email, "pass": password, "rem": 1, "need_captcha": "", "captcha": ""}
-        response = scraper.post("https://www.lostfilm.tv/ajaxik.php", params)
+        response = scraper.post("https://www.lostfilm.tv/ajaxik.php", verify=False, **params)
 
         result = response.json()
         if 'error' in result:
@@ -480,8 +480,8 @@ class LostFilmTVTracker(object):
         if not cookies:
             return False
         my_settings_url = 'https://www.lostfilm.tv/my_settings'
-        r1 = scraper.get(my_settings_url, headers=self._headers, cookies=cookies,
-                          **self.tracker_settings.get_requests_kwargs())
+        r1 = scraper.get(my_settings_url, headers=self._headers, cookies=cookies, verify=False,
+                         **self.tracker_settings.get_requests_kwargs())
         return r1.url == my_settings_url and '<meta http-equiv="refresh" content="0; url=/">' not in r1.text
 
     def get_cookies(self):
@@ -500,8 +500,8 @@ class LostFilmTVTracker(object):
         if url is None:
             return None
 
-        response = scraper.get(url, headers=self._headers, allow_redirects=False,
-                                **self.tracker_settings.get_requests_kwargs())
+        response = scraper.get(url, headers=self._headers, allow_redirects=False, verify=False,
+                               **self.tracker_settings.get_requests_kwargs())
         if response.status_code != 200 or response.url != url \
             or '<meta http-equiv="refresh" content="0; url=/">' in response.text:
             return response
@@ -576,15 +576,15 @@ class LostFilmTVTracker(object):
         cookies = self.get_cookies()
 
         download_redirect_url = self.download_url_pattern.format(cat=cat, season=season, episode=episode)
-        download_redirect = scraper.get(download_redirect_url, headers=self._headers, cookies=cookies,
-                                         **self.tracker_settings.get_requests_kwargs())
+        download_redirect = scraper.get(download_redirect_url, headers=self._headers, cookies=cookies, verify=False,
+                                        **self.tracker_settings.get_requests_kwargs())
 
         soup = get_soup(download_redirect.text)
         meta_content = soup.find('meta').attrs['content']
         download_page_url = meta_content.split(';')[1].strip()[4:]
 
-        download_page = scraper.get(download_page_url, headers=self._headers,
-                                     **self.tracker_settings.get_requests_kwargs())
+        download_page = scraper.get(download_page_url, headers=self._headers, verify=False,
+                                    **self.tracker_settings.get_requests_kwargs())
 
         soup = get_soup(download_page.text)
         return list(map(parse_download, soup.find_all('div', class_='inner-box--item')))
