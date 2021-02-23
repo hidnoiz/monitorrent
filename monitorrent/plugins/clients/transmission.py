@@ -4,6 +4,7 @@ from pytz import reference, utc
 from sqlalchemy import Column, Integer, String
 from monitorrent.db import Base, DBSession
 from monitorrent.plugin_managers import register_plugin
+from monitorrent.utils.bittorrent import Torrent
 import base64
 
 
@@ -101,6 +102,8 @@ class TransmissionClientPlugin(object):
         :type torrent: str
         :type torrent_settings: clients.TopicSettings | None
         """
+        unwanted_files = self.get_unwanted_files(torrent)
+        print(unwanted_files)
         client = self.check_connection()
         if not client:
             return False
@@ -110,6 +113,26 @@ class TransmissionClientPlugin(object):
                 torrent_settings_dict['download_dir'] = torrent_settings.download_dir
         client.add_torrent(base64.b64encode(torrent).decode('utf-8'), **torrent_settings_dict)
         return True
+
+    def get_unwanted_files(self, torrent, unwanted_length = None):
+        """
+        returned list of file names
+        :type torrent: str
+        :type unwanted_length:int | None
+        """
+        torrent = Torrent(torrent)
+        files = torrent.get_filelist()
+        files = sorted(files, key=lambda x: x['name'])
+        for file in files:
+            print(file)
+        if len(files) == 0:
+            return None
+        if unwanted_length:
+            return [file['name'] for file in files[:unwanted_length]]
+        else:
+            return [file['name'] for file in files[:-1]]
+
+
 
     def remove_torrent(self, torrent_hash):
         client = self.check_connection()
